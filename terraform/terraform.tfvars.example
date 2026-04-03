@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and customize before apply.
+aws_region                = "us-east-1"
+cluster_name              = "devops-demo-eks"
+vpc_name                  = "devops-demo-vpc"
+user_service_repo_name    = "user-service"
+product_service_repo_name = "product-service"

@@ -1,0 +1,25 @@
+# Optional Prometheus config scraping both services via Kubernetes DNS.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: devops-demo
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+
+      - job_name: "user-service"
+        metrics_path: /healthz
+        static_configs:
+          - targets: ["user-service.devops-demo.svc.cluster.local:80"]
+
+      - job_name: "product-service"
+        metrics_path: /healthz
+        static_configs:
+          - targets: ["product-service.devops-demo.svc.cluster.local:80"]
