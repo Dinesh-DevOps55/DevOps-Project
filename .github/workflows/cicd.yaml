@@ -3,6 +3,7 @@ name: Build Push Deploy
 on:
   push:
     branches:
+      - master
       - main
   workflow_dispatch:
 
@@ -60,6 +61,7 @@ jobs:
           kubectl apply -f k8s/user-service-service.yaml
           kubectl apply -f k8s/product-service-deployment.yaml
           kubectl apply -f k8s/product-service-service.yaml
+          kubectl apply -f k8s/ingress.yaml
 
           # Update deployments with the new immutable image tags.
           kubectl -n devops-demo set image deployment/user-service user-service=$ECR_REGISTRY/$USER_REPO:$IMAGE_TAG

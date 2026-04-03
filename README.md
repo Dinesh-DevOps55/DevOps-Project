@@ -21,6 +21,7 @@ Minimal microservices project showing a real DevOps workflow:
 |   |-- user-service-service.yaml
 |   |-- product-service-deployment.yaml
 |   |-- product-service-service.yaml
+|   |-- ingress.yaml
 |   `-- monitoring/
 |       |-- prometheus-configmap.yaml
 |       |-- prometheus-deployment.yaml
@@ -137,6 +138,7 @@ kubectl apply -f k8s/user-service-deployment.yaml
 kubectl apply -f k8s/user-service-service.yaml
 kubectl apply -f k8s/product-service-deployment.yaml
 kubectl apply -f k8s/product-service-service.yaml
+kubectl apply -f k8s/ingress.yaml
 ```
 
 Check:
@@ -144,11 +146,54 @@ Check:
 ```bash
 kubectl -n devops-demo get pods
 kubectl -n devops-demo get svc
+kubectl -n devops-demo get ingress
 ```
 
 Notes:
 - Deployment manifests start with placeholder images (`example.com/...`).
 - In production, CI/CD updates image tags automatically via `kubectl set image`.
+- Services are `ClusterIP` and exposed publicly through one Ingress.
+
+### Single URL Access via Ingress (EKS)
+
+Install AWS Load Balancer Controller once per cluster (IRSA + Helm):
+
+```bash
+# Associate IAM OIDC provider (one-time per cluster).
+eksctl utils associate-iam-oidc-provider --region us-east-1 --cluster devops-demo-eks --approve
+
+# Create IAM service account for the controller.
+eksctl create iamserviceaccount \
+  --cluster devops-demo-eks \
+  --namespace kube-system \
+  --name aws-load-balancer-controller \
+  --attach-policy-arn arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess \
+  --override-existing-serviceaccounts \
+  --approve
+
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+
+helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=devops-demo-eks \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller
+```
+
+Then apply ingress:
+
+```bash
+kubectl apply -f k8s/ingress.yaml
+kubectl -n devops-demo get ingress
+```
+
+Once the ingress address appears, test:
+
+```bash
+curl http://<INGRESS_HOSTNAME>/users
+curl http://<INGRESS_HOSTNAME>/products
+```
 
 ## 6) Optional Prometheus Deployment
 
@@ -165,7 +210,7 @@ Access Prometheus through NodePort `30090` on a worker node public IP (or port-f
 
 Workflow file: `.github/workflows/cicd.yaml`
 
-On push to `main`, pipeline:
+On push to `master` or `main`, pipeline:
 1. Builds Docker images for both services
 2. Pushes them to Amazon ECR
 3. Applies Kubernetes manifests
@@ -208,4 +253,3 @@ kubectl -n devops-demo rollout restart deploy/product-service
 - Namespaced resources with labels
 - Immutable image tagging in CI (`github.sha`)
 - Infrastructure as Code via Terraform
-

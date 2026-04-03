@@ -19,7 +19,7 @@ spec:
       containers:
         - name: user-service
           # GitHub Actions updates this image tag during deployment.
-          image: example.com/user-service:latest
+          image: 242201314554.dkr.ecr.us-east-1.amazonaws.com/user-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
